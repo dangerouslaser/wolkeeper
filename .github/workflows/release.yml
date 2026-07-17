@@ -1,0 +1,35 @@
+name: Build and attach ipk
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g @webosose/ares-cli
+      - run: ./build.sh
+      - name: Generate manifest
+        run: |
+          IPK=$(ls build/*.ipk)
+          TAG="${GITHUB_REF_NAME}"
+          node gen-manifest.js "$IPK" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/$(basename "$IPK")"
+      - name: Attach to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" build/*.ipk org.webosbrew.wolkeeper.manifest.json --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolkeeper-ipk
+          path: |
+            build/*.ipk
+            org.webosbrew.wolkeeper.manifest.json

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Boot hook: run wolkeeper under its own systemd unit so nothing reaps it,
+# and systemd restarts it if the suspend-transition cleanup kills it.
+# Reversible: rm this file + rm /home/root/wolkeeper.sh; unit lives in /run (tmpfs).
+mkdir -p /run/systemd/system
+cat > /run/systemd/system/webosbrew-wolkeeper.service <<'UNIT'
+[Unit]
+Description=webosbrew WoL keepalive (hold Active Standby)
+After=ls-hubd.service
+
+[Service]
+ExecStart=/bin/sh /home/root/wolkeeper.sh
+Restart=always
+RestartSec=5
+UNIT
+systemctl daemon-reload
+systemctl start webosbrew-wolkeeper.service
+echo "$(date) 98-wolkeeper hook: unit created+started" >> /home/root/wolkeeper.log

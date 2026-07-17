@@ -1,0 +1,4 @@
+build/
+*.ipk
+org.webosbrew.wolkeeper.manifest.json
+node_modules/

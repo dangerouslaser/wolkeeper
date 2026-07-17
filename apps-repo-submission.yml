@@ -1,0 +1,19 @@
+# PR this file as packages/org.webosbrew.wolkeeper.yml to github.com/webosbrew/apps-repo
+# (after first GitHub release is published)
+title: WoL Keeper
+iconUri: https://raw.githubusercontent.com/dangerouslaser/wolkeeper/main/src/largeIcon.png
+manifestUrl: https://github.com/dangerouslaser/wolkeeper/releases/latest/download/org.webosbrew.wolkeeper.manifest.json
+category: utility
+pool: main
+description: |
+  Keeps ethernet Wake-on-LAN working **forever** in standby on rooted TVs.
+
+  Stock firmware powers the ethernet PHY off ~15 minutes after you turn the TV
+  off with the remote, after which magic packets can no longer wake it. WoL
+  Keeper holds the TV in network standby (Active Standby) by renewing a sleepd
+  activity from a self-healing systemd unit, so the TV stays on your network
+  and WoL works at any time.
+
+  Note: standby power consumption is higher than the deep zero-watt state —
+  this is inherent to keeping the network interface powered. Fully reversible;
+  nothing on the read-only rootfs is modified.
