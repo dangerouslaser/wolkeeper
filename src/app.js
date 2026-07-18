@@ -55,12 +55,31 @@ function refresh() {
         log(lines || '(no log yet)');
       }
     );
+    luna('luna://com.webos.settingsservice/getSystemSettings',
+      { category: 'general', keys: ['alwaysOn'] },
+      function (s) {
+        var on = s.settings && s.settings.alwaysOn === 'on';
+        setDot('ar', on ? 'ok' : 'warn', on ? 'on' : 'off');
+      });
   });
 }
+
+/* Enable = the full verified fix:
+ * 1. Always Ready ON with a zero-length nightly disable window — the micom's
+ *    sanctioned 24/7 warm standby; prevents the ~4h OFF_BY_WARMWAIT watchdog.
+ * 2. Keepalive unit holding a sleepd activity — belt-and-braces against the
+ *    ordinary standby->suspend path. */
+var AR_ON = '{"category":"general","settings":{"alwaysOn":"on",' +
+  '"alwaysOnDisableStartHour":"6","alwaysOnDisableEndHour":"6",' +
+  '"alwaysOnDisableStartMinute":"0","alwaysOnDisableEndMinute":"0"}}';
+var AR_OFF = '{"category":"general","settings":{"alwaysOn":"off",' +
+  '"alwaysOnDisableStartHour":"1","alwaysOnDisableEndHour":"6",' +
+  '"alwaysOnDisableStartMinute":"0","alwaysOnDisableEndMinute":"0"}}';
 
 function enable() {
   log('Installing…');
   rootExec(
+    "luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '" + AR_ON + "' && " +
     'cp ' + APP_DIR + '/assets/wolkeeper.sh ' + DAEMON + ' && ' +
     'cp ' + APP_DIR + '/assets/98-wolkeeper ' + HOOK + ' && ' +
     'chmod +x ' + DAEMON + ' ' + HOOK + ' && ' +
@@ -75,6 +94,7 @@ function enable() {
 function disable() {
   log('Removing…');
   rootExec(
+    "luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '" + AR_OFF + "'; " +
     'systemctl stop ' + UNIT + ' 2>/dev/null; ' +
     'rm -f /run/systemd/system/' + UNIT + ' ' + HOOK + ' ' + DAEMON + '; ' +
     'systemctl daemon-reload; echo DISABLE_OK',
