@@ -1,18 +1,50 @@
 #!/bin/sh
-# Boot hook: run wolkeeper under its own systemd unit so nothing reaps it,
-# and systemd restarts it if the suspend-transition cleanup kills it.
-# Reversible: rm this file + rm /home/root/wolkeeper.sh; unit lives in /run (tmpfs).
+# WoL Keeper boot hook.
+#
+# Installed as a SYMLINK at /var/lib/webosbrew/init.d/98-wolkeeper pointing back
+# into the app package, so that uninstalling the app disarms it: the link dangles,
+# the [ -x ] test in webosbrew's hook runner fails, and nothing starts. An app
+# update likewise takes effect on its own — there is only ever one copy of the
+# daemon, the one inside the package.
+#
+# Runs wolkeeper under its own transient systemd unit so nothing reaps it.
+# Processes started directly from an init.d hook live in ls-hubd.service's cgroup
+# and get cleaned up at suspend transitions; a unit of our own does not, and
+# Restart=always brings it back if anything else kills it.
+#
+# The unit is written to /run (tmpfs) — the read-only rootfs is never touched,
+# and the unit is gone by itself after the next boot.
+
+# Resolve the daemon next to this script, following the symlink back into the
+# app package. Falls back to the installed path if readlink -f is unavailable.
+SELF=$(readlink -f "$0" 2>/dev/null)
+case "$SELF" in
+  */assets/98-wolkeeper)
+    DAEMON="${SELF%/98-wolkeeper}/wolkeeper.sh" ;;
+  *)
+    DAEMON=/media/developer/apps/usr/palm/applications/com.github.dangerouslaser.wolkeeper/assets/wolkeeper.sh ;;
+esac
+
+# App uninstalled (or mid-update) — nothing to start.
+[ -f "$DAEMON" ] || exit 0
+
+command -v systemctl >/dev/null 2>&1 || {
+  echo "$(date) 98-wolkeeper: no systemd on this firmware, cannot start" >> /home/root/wolkeeper.log
+  exit 1
+}
+
 mkdir -p /run/systemd/system
-cat > /run/systemd/system/webosbrew-wolkeeper.service <<'UNIT'
+cat > /run/systemd/system/wolkeeper.service <<UNIT
 [Unit]
-Description=webosbrew WoL keepalive (hold Active Standby)
+Description=WoL Keeper keepalive (hold Active Standby so ethernet WoL keeps working)
 After=ls-hubd.service
 
 [Service]
-ExecStart=/bin/sh /home/root/wolkeeper.sh
+ExecStart=/bin/sh $DAEMON
 Restart=always
 RestartSec=5
 UNIT
+
 systemctl daemon-reload
-systemctl start webosbrew-wolkeeper.service
-echo "$(date) 98-wolkeeper hook: unit created+started" >> /home/root/wolkeeper.log
+systemctl start wolkeeper.service
+echo "$(date) 98-wolkeeper hook: unit created+started ($DAEMON)" >> /home/root/wolkeeper.log

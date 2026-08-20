@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install -g @webosose/ares-cli
+      - run: npm install -g @webos-tools/cli
       - run: ./build.sh
       - name: Generate manifest
         run: |
@@ -22,14 +22,15 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           node gen-manifest.js "$IPK" \
             "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/$(basename "$IPK")"
+          echo "MANIFEST=$(node -p "require('./src/appinfo.json').id").manifest.json" >> "$GITHUB_ENV"
       - name: Attach to release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" build/*.ipk org.webosbrew.wolkeeper.manifest.json --clobber
+        run: gh release upload "${GITHUB_REF_NAME}" build/*.ipk "$MANIFEST" --clobber
       - uses: actions/upload-artifact@v4
         with:
           name: wolkeeper-ipk
           path: |
             build/*.ipk
-            org.webosbrew.wolkeeper.manifest.json
+            *.manifest.json

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the WoL Keeper ipk. Requires ares-package (@webosose/ares-cli).
+# Build the WoL Keeper ipk. Requires ares-package (@webos-tools/cli).
 set -euo pipefail
 cd "$(dirname "$0")"
 VERSION=$(python3 -c "import json;print(json.load(open('src/appinfo.json'))['version'])")

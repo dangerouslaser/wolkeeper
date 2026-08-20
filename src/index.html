@@ -9,23 +9,24 @@
     font-family: "LG Display", "Museo Sans", sans-serif;
     background: #16213e; color: #e8e8e8;
     width: 1920px; height: 1080px; overflow: hidden;
-    padding: 80px 120px;
+    padding: 56px 120px;
   }
-  h1 { font-size: 64px; font-weight: 300; margin-bottom: 12px; }
+  h1 { font-size: 56px; font-weight: 300; margin-bottom: 8px; }
   h1 .bolt { color: #ffd166; }
-  .subtitle { font-size: 28px; color: #9aa5c4; margin-bottom: 48px; }
+  .subtitle { font-size: 26px; color: #9aa5c4; margin-bottom: 32px; }
   .card {
-    background: #1b2a4a; border-radius: 16px; padding: 40px;
-    margin-bottom: 32px;
+    background: #1b2a4a; border-radius: 16px; padding: 32px 40px;
+    margin-bottom: 24px;
   }
-  .status-row { display: flex; align-items: center; gap: 24px; margin-bottom: 16px; font-size: 34px; }
-  .dot { width: 28px; height: 28px; border-radius: 50%; background: #666; flex: none; }
+  .status-row { display: flex; align-items: center; gap: 24px; margin-bottom: 14px; font-size: 30px; }
+  .status-row:last-child { margin-bottom: 0; }
+  .dot { width: 24px; height: 24px; border-radius: 50%; background: #666; flex: none; }
   .dot.ok { background: #4caf50; } .dot.bad { background: #ef5350; } .dot.warn { background: #ffd166; }
-  .label { color: #9aa5c4; width: 380px; flex: none; }
+  .label { color: #9aa5c4; width: 420px; flex: none; }
   .value { font-weight: 500; }
-  .buttons { display: flex; gap: 32px; margin-top: 48px; }
+  .buttons { display: flex; gap: 32px; margin-top: 32px; }
   button {
-    font-size: 34px; padding: 26px 64px; border-radius: 12px; border: 4px solid transparent;
+    font-size: 32px; padding: 22px 56px; border-radius: 12px; border: 4px solid transparent;
     background: #2b3d66; color: #e8e8e8; outline: none; cursor: pointer;
   }
   button:focus { border-color: #ffd166; background: #35497a; }
@@ -33,7 +34,9 @@
   button.primary:focus { background: #388059; }
   button.danger { background: #6b2e2e; }
   button.danger:focus { background: #803838; }
-  #log { font-family: monospace; font-size: 22px; color: #9aa5c4; white-space: pre-wrap; max-height: 260px; overflow: hidden; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  #log { font-family: monospace; font-size: 20px; line-height: 1.35; color: #9aa5c4;
+         white-space: pre-wrap; height: 260px; overflow: hidden; }
 </style>
 </head>
 <body>
@@ -41,10 +44,11 @@
   <div class="subtitle">Keeps ethernet Wake-on-LAN alive forever by holding the TV in network standby</div>
 
   <div class="card">
+    <div class="status-row"><div class="dot" id="dot-root"></div><div class="label">Root access (Homebrew Channel)</div><div class="value" id="v-root">checking&hellip;</div></div>
+    <div class="status-row"><div class="dot" id="dot-fw"></div><div class="label">Firmware support</div><div class="value" id="v-fw">checking&hellip;</div></div>
     <div class="status-row"><div class="dot" id="dot-ar"></div><div class="label">Always Ready mode</div><div class="value" id="v-ar">checking&hellip;</div></div>
     <div class="status-row"><div class="dot" id="dot-installed"></div><div class="label">Autostart hook</div><div class="value" id="v-installed">checking&hellip;</div></div>
     <div class="status-row"><div class="dot" id="dot-unit"></div><div class="label">Keepalive service</div><div class="value" id="v-unit">checking&hellip;</div></div>
-    <div class="status-row"><div class="dot" id="dot-root"></div><div class="label">Root access (Homebrew Channel)</div><div class="value" id="v-root">checking&hellip;</div></div>
   </div>
 
   <div class="card"><div id="log">Loading&hellip;</div></div>
