@@ -1,5 +1,5 @@
-# PR this file as packages/com.github.dangerouslaser.wolkeeper.yml to
-# github.com/webosbrew/apps-repo (after the first GitHub release is published).
+# This is the file submitted as packages/com.github.dangerouslaser.wolkeeper.yml
+# to github.com/webosbrew/apps-repo (PR #205). Keep the two in sync.
 title: WoL Keeper
 iconUri: https://raw.githubusercontent.com/dangerouslaser/wolkeeper/main/src/largeIcon.png
 manifestUrl: https://github.com/dangerouslaser/wolkeeper/releases/latest/download/com.github.dangerouslaser.wolkeeper.manifest.json
@@ -7,29 +7,58 @@ category: utility
 pool: main
 shortDescription: Keeps ethernet Wake-on-LAN working in standby indefinitely
 requirements:
-  # Always Ready (the `alwaysOn` setting) is the only sanctioned way to hold the
-  # TV in warm standby, and the whole design depends on it. It arrived with
-  # webOS 22 on the 2022 models — starfish release 7.0. Everything older is out,
-  # including the webOS 5/6 sets that do have systemd.
+  # Always Ready (`alwaysOn`) is the only sanctioned way to hold the TV in warm
+  # standby and the whole design rests on it. It arrived with webOS 22 on the
+  # 2022 models. systemd alone would allow >=5.0, but webOS 5 and 6 sets have
+  # systemd and no alwaysOn, so they cannot work either.
   webosRelease: '>=7.0'
 description: |
-  Keeps ethernet Wake-on-LAN working **forever** in standby on rooted TVs.
+  ## ⚡ WoL Keeper
+  Keep ethernet **Wake-on-LAN working forever** in standby.
 
-  Stock firmware powers the ethernet PHY off ~15 minutes after you turn the TV
-  off with the remote, after which magic packets can no longer wake it. WoL
-  Keeper holds the TV in network standby by turning on LG's own Always Ready
-  mode with a zero-length nightly disable window, and renewing a sleepd
-  activity from a self-healing systemd unit — so the TV stays on your network
-  and WoL works at any time.
+  On recent LG TVs, WoL only works for ~15 minutes after you turn the TV off —
+  then the TV descends into a deep "zero-watt" standby that powers off the
+  ethernet PHY entirely, drops off your network, and can only be turned back on
+  with the remote.
 
-  Requires a rooted TV with Homebrew Channel, and webOS 22 or newer.
+  WoL Keeper fixes this by combining two mechanisms:
+  - Enables the TV's native **Always Ready** mode (the sanctioned 24/7 warm
+    standby, so the micom's ~4 h warm-standby watchdog never force-kills it)
+    and neutralizes its nightly deep-off window, which is not exposed in the
+    TV's settings UI.
+  - Installs a small self-healing keepalive daemon (a transient systemd unit,
+    recreated each boot via a Homebrew Channel startup hook) that renews a
+    sleepd activity so the suspend path never executes.
 
-  **Press Disable before uninstalling.** Uninstalling removes the daemon and
-  the boot hook by itself, but not the Always Ready override — Disable is what
-  puts your standby behaviour back the way it was.
+  The TV then stays reachable on ethernet and wakes from magic packets at any
+  time — verified across 17+ hour overnight standbys, including the TV's own
+  scheduled standby maintenance reboots.
 
-  Note: standby power consumption is higher than the deep zero-watt state —
-  this is inherent to keeping the network interface powered.
+  ### Requirements
+  - Rooted TV with [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel)
+  - **webOS 22 or newer.** Always Ready is what holds warm standby open, and it
+    arrived on the 2022 models. Enable checks that both systemd and the
+    `alwaysOn` setting are present before it changes anything, and verifies
+    afterwards that the keepalive unit reached `active` and that the settings
+    read back as written — so on firmware where it cannot work you get told,
+    rather than a silent no-op reported as success.
 
-  Verified on OLED77G5WUA, webOS 25 (10.3.0), FW 33.30.97. Reports from other
-  models and webOS generations are very welcome — please open an issue.
+  ### Notes
+  - Standby power consumption is higher than the deep zero-watt state — that is
+    inherent to keeping the network interface powered.
+  - **Press Disable before uninstalling.** Uninstalling removes the daemon and
+    the boot hook by itself (the hook is a symlink into the app package, so it
+    disarms when the package goes away), but the Always Ready setting is a
+    system setting — Disable is what restores it, along with the nightly window
+    you had before. Your previous values are saved on Enable, so Disable puts
+    back what you actually had rather than LG's defaults.
+  - The read-only rootfs is never modified; the keepalive unit lives in `/run`
+    (tmpfs) and everything else under `/var/lib/webosbrew`.
+
+  ### Compatibility
+  Developed and verified on OLED77G5WUA, webOS 25 (10.3.0), FW 33.30.97.
+  Reports from other models — especially a different generation — are very
+  welcome; please [open an
+  issue](https://github.com/dangerouslaser/wolkeeper/issues) with your model,
+  webOS version and what the app reported. A failure report is as useful as a
+  success one.
