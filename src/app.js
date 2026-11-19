@@ -66,6 +66,16 @@ function rootExec(command, cb) {
   luna('luna://org.webosbrew.hbchannel.service/exec', { command: command }, cb);
 }
 
+/* Whether the Homebrew Channel service is reachable and running as root. exec
+ * runs as whatever user that service runs as, so a successful exec proves
+ * nothing about uid; getConfiguration reports it (root: process.getuid() === 0).
+ * cb(null) when the call fails, else cb(the response). */
+function checkRoot(cb) {
+  luna('luna://org.webosbrew.hbchannel.service/getConfiguration', {}, function (r) {
+    cb(r && r.returnValue ? r : null);
+  });
+}
+
 /* Single-quote a value for the shell. */
 function sq(s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'";
@@ -187,11 +197,30 @@ function probeCmd() {
     '[ -L ' + HOOK + ' ] && echo HOOK_LINK || echo HOOK_NOLINK; ' +
     '[ -x ' + HOOK + ' ] && echo HOOK_OK || echo HOOK_NO; ' +
     'echo UNIT:$(systemctl is-active ' + UNIT + ' 2>/dev/null || echo unavailable); ' +
-    'echo "---LOG---"; tail -n 6 ' + LOGFILE + ' 2>/dev/null';
+    'echo "---LOG---"; tail -n 6 ' + LOGFILE + ' 2>/dev/null || true';
 }
 
 function refresh() {
   setDot('root', '', 'checking…');
+  checkRoot(function (c) {
+    if (!c || c.root !== true) {
+      setDot('root', 'bad', !c ? 'unavailable — is Homebrew Channel installed and rooted?'
+                               : 'unavailable — Homebrew Channel is not running as root');
+      setDot('fw', '', 'unknown');
+      setDot('ar', '', 'unknown');
+      setDot('installed', '', 'unknown');
+      setDot('unit', '', 'unknown');
+      log(!c ? 'Cannot reach luna://org.webosbrew.hbchannel.service.\n' +
+               'WoL Keeper needs a rooted TV with Homebrew Channel and root access enabled.'
+             : 'Homebrew Channel is installed but is not running as root.\n' +
+               'WoL Keeper needs a rooted TV with Homebrew Channel and root access enabled.');
+      return;
+    }
+    refreshProbe();
+  });
+}
+
+function refreshProbe() {
   rootExec(probeCmd(), function (r) {
     var out = (r && r.stdoutString) || '';
     if (!r || !r.returnValue || out.indexOf('ROOT_OK') < 0) {
@@ -269,6 +298,18 @@ function enable() {
   if (busy) return;
   setBusy(true);
   log('Checking prerequisites…');
+  checkRoot(function (c) {
+    if (!c || c.root !== true) {
+      finish('Not enabled: no root access.\n' +
+             (c ? 'Homebrew Channel is installed but is not running as root.\n' : '') +
+             'WoL Keeper needs a rooted TV with Homebrew Channel and root access enabled.');
+      return;
+    }
+    enableCheck();
+  });
+}
+
+function enableCheck() {
   rootExec(
     'echo ROOT_OK; ' +
     'command -v systemctl >/dev/null 2>&1 && echo SYSTEMD_YES || echo SYSTEMD_NO; ' +
