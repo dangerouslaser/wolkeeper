@@ -1,6 +1,6 @@
 {
   "id": "com.github.dangerouslaser.wolkeeper",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "vendor": "Bryan Hoban",
   "type": "web",
   "main": "index.html",

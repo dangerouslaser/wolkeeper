@@ -37,6 +37,7 @@
   button:disabled { opacity: 0.45; cursor: default; }
   #log { font-family: monospace; font-size: 20px; line-height: 1.35; color: #9aa5c4;
          white-space: pre-wrap; height: 260px; overflow: hidden; }
+  .hint { margin-top: 24px; font-size: 20px; color: #9aa4c0; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -58,6 +59,10 @@
     <button id="btn-disable" class="danger">Disable</button>
     <button id="btn-refresh">Refresh</button>
   </div>
+
+  <div class="hint">Press <b>Disable</b> before uninstalling. Uninstalled while enabled, the keepalive
+    notices within two minutes and cleans up after itself, restoring your Always Ready settings &mdash;
+    but if the TV is switched off or rebooted first, the Always Ready override stays.</div>
 
 <script src="app.js"></script>
 </body>

@@ -66,18 +66,30 @@ is re-armed within seconds.
    `/run/systemd/system` (tmpfs — the read-only rootfs is never touched) and
    starts it.
 4. The unit runs `wolkeeper.sh` **from the app directory**, renewing the sleepd
-   activity `com.github.dangerouslaser.wolkeeper` (300 s) every 120 s and
+   activity `com.github.dangerouslaser.wolkeeper` (300 s) every 60 s and
    logging power-state changes to `/home/root/wolkeeper.log`.
 5. **Verifies the result** and refuses to claim success otherwise: that the
    unit actually reached `active`, that `alwaysOn` reads back as `on`, and that
    the zero-length window stuck. If any of those fails it says so and shows
    `systemctl status` output rather than reporting a silent no-op.
 
-Nothing is copied outside the package, so **uninstalling the app disarms it**:
-the symlink dangles, the `[ -x ]` test in webosbrew's hook runner fails, and
-nothing starts. The unit lives in tmpfs and is gone after the next boot. An app
-update likewise takes effect on its own — there is only ever one copy of the
-daemon, the one inside the package.
+Nothing is copied outside the package, so **uninstalling the app disarms it**
+on the next boot: the symlink dangles, the `[ -x ]` test in webosbrew's hook
+runner fails, and nothing starts. The unit lives in tmpfs and is gone after the
+next boot. An app update likewise takes effect on its own (at the next boot) —
+there is only ever one copy of the daemon, the one inside the package.
+
+Uninstalling does **not** stop the daemon that is already running — its shell
+keeps the deleted script open. So the daemon checks on every loop whether its
+own script is still there. If it is gone, and still gone 30 s later (an app
+update replaces the package directory too, briefly), it treats that as an
+uninstall and undoes Enable itself: ends the sleepd activity, restores the
+saved Always Ready settings (or LG's defaults, if nothing was saved and the
+settings are still WoL Keeper's override), removes the dangling hook, the unit,
+the saved-settings file and the log, and stops. If it cannot confirm the
+restore, it keeps the saved-settings file and the log so you can restore by
+hand. This takes up to about two minutes; if the TV is switched off or rebooted
+before then, nothing is left running, but the Always Ready override stays.
 
 In this state the TV parks in warm standby with the network up. The TV still
 performs its scheduled standby maintenance reboots (`REBOOT_ARREGULAR`,
@@ -93,12 +105,14 @@ expect a ~2 minute network gap around those.
   General → Always Ready in the TV settings if you care.
 
 **Press Disable before uninstalling.** Disable restores your saved Always Ready
-settings and removes everything else. Uninstalling the app on its own disarms
-the daemon and the boot hook, but the `alwaysOn` override is a system setting —
-it stays as WoL Keeper left it, with the app that knew how to undo it gone.
-(The saved values are still readable at
-`/var/lib/webosbrew/wolkeeper.prev-alwayson.json` if you need to put them back
-by hand.)
+settings, verifies the restore, and removes everything else; the saved-settings
+file is only deleted once the restore is confirmed, so a failed Disable can be
+retried. If you uninstall while enabled, the running daemon notices within about
+two minutes and cleans up after itself (see above) — but if the TV is switched
+off or rebooted before then, the `alwaysOn` override stays as WoL Keeper left
+it, with the app that knew how to undo it gone. The saved values are then still
+readable at `/var/lib/webosbrew/wolkeeper.prev-alwayson.json` if you need to put
+them back by hand.
 
 ## Compatibility
 

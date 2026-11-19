@@ -436,8 +436,10 @@ function enableVerify(ctx) {
              '  • Boot hook: ' + HOOK + ' → ' + ASSETS + '/98-wolkeeper\n' +
              restoreNote + '\n\n' +
              'The TV should now stay reachable on ethernet in standby. Press Disable to\n' +
-             'put everything back — and press it before uninstalling the app, or the\n' +
-             'Always Ready override stays behind with nothing left to undo it.');
+             'put everything back, and press it before uninstalling the app: if you\n' +
+             'uninstall while enabled, the keepalive keeps running until it notices the\n' +
+             'app is gone (within two minutes) and then cleans up after itself — but if the\n' +
+             'TV is switched off or rebooted before that, the Always Ready override stays.');
     });
   });
 }
@@ -461,7 +463,7 @@ function disable() {
       activityEndCmd(OLD_ACTIVITY),
       settingsSetCmd(restore),
       'rm -f /run/systemd/system/' + UNIT + ' /run/systemd/system/' + OLD_UNIT + ' ' +
-        HOOK + ' ' + OLD_DAEMON + ' ' + STASH + ' ' + LOGFILE,
+        HOOK + ' ' + OLD_DAEMON + ' ' + LOGFILE,
       'systemctl daemon-reload 2>/dev/null',
       'echo REVERTED'
     ].join('; ');
@@ -488,15 +490,25 @@ function disableVerify(restore, stock) {
         var problems = [];
         if (out.indexOf('HOOK_GONE') < 0) problems.push('the boot hook is still at ' + HOOK);
         if (unitState === 'active') problems.push('the keepalive service is still running');
-        if (now && String(now.alwaysOn) !== String(restore.alwaysOn)) {
+        if (!now || typeof now.alwaysOn === 'undefined') {
+          problems.push('Always Ready could not be read back to confirm the restore');
+        } else if (String(now.alwaysOn) !== String(restore.alwaysOn)) {
           problems.push('Always Ready reads back as "' + now.alwaysOn + '" instead of "' +
                         restore.alwaysOn + '"');
+        } else if (!sameWindow(now, restore)) {
+          problems.push('the nightly disable window reads back as ' + windowText(now) +
+                        ' instead of ' + windowText(restore));
         }
 
         if (problems.length) {
-          finish('Disable did not fully revert — ' + problems.join('; ') + '.');
+          /* The stash is only deleted once the restore is confirmed, so a failed
+           * restore can be retried with Disable, or done by hand from the file. */
+          finish('Disable did not fully revert — ' + problems.join('; ') + '.' +
+                 (stock ? '' : '\n\nYour previous Always Ready settings are still saved in\n  ' +
+                               STASH + '\nPress Disable again to retry.'));
           return;
         }
+        rootExec('rm -f ' + STASH, function () {});
         finish('Disabled, and verified:\n' +
                '  • Always Ready: ' + restore.alwaysOn + ', nightly disable window ' +
                  windowText(restore) +
